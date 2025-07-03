@@ -14,8 +14,8 @@ import tempfile
 from datetime import datetime
 
 # Define label dimensions (similar to your original)
-LABEL_WIDTH = 18 * cm  # Wider for shipping label
-LABEL_HEIGHT = 12 * cm  # Shorter height
+LABEL_WIDTH = 10 * cm  # Wider for shipping label
+LABEL_HEIGHT = 7.2 * cm  # Shorter height
 LABEL_PAGESIZE = (LABEL_WIDTH, LABEL_HEIGHT)
 
 # Check for required libraries
@@ -191,8 +191,8 @@ def generate_shipping_labels(excel_file_path, output_pdf_path, status_callback=N
         
         # Create the main table
         main_table = Table(main_table_data,
-                          colWidths=[4*cm, 8*cm, 6*cm],
-                          rowHeights=[1.5*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm, 1*cm])
+                          colWidths=[2*cm, 4*cm, 4*cm],
+                          rowHeights=[1.3*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1.2*cm, 1*cm])
         
         # Style the table
         main_table.setStyle(TableStyle([
