@@ -156,6 +156,12 @@ def get_value_with_fallback(row, column_name, default_value):
     value = str(row[column_name]).strip()
     return value if value else default_value
 
+def draw_centered_text(canvas, text, x, y, width):
+    """Helper function to draw centered text"""
+    text_width = canvas.stringWidth(text, canvas._fontname, canvas._fontsize)
+    center_x = x + width / 2 - text_width / 2
+    canvas.drawString(center_x, y, text)
+
 def create_label_pdf(data, column_mappings):
     """Create PDF with shipping labels"""
     # Create a temporary file
@@ -221,11 +227,11 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     
     # Add text
     c.setFont('Helvetica-Bold', 11)
-    c.drawCentredText(0.5 * cm + eka_col_width / 2, current_y + row_height / 2 - 0.15 * cm, 'EKA Mobility')
-    c.drawCentredText(0.5 * cm + eka_col_width + doc_header_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Document Date')
+    draw_centered_text(c, 'EKA Mobility', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, eka_col_width)
+    draw_centered_text(c, 'Document Date', 0.5 * cm + eka_col_width, current_y + row_height / 2 - 0.15 * cm, doc_header_width)
     
     c.setFont('Helvetica', 11)
-    c.drawCentredText(0.5 * cm + eka_col_width + doc_header_width + doc_value_width / 2, current_y + row_height / 2 - 0.15 * cm, document_date)
+    draw_centered_text(c, document_date, 0.5 * cm + eka_col_width + doc_header_width, current_y + row_height / 2 - 0.15 * cm, doc_value_width)
     
     # Row 2: ASN No Header, ASN Value, Barcode
     current_y -= row_height
@@ -234,10 +240,10 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row_height)
     
     c.setFont('Helvetica-Bold', 11)
-    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row_height / 2 - 0.15 * cm, 'ASN No')
+    draw_centered_text(c, 'ASN No', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
-    c.drawCentredText(0.5 * cm + col1_width + col2_width / 2, current_y + row_height / 2 - 0.15 * cm, asn_no)
-    c.drawCentredText(0.5 * cm + col1_width + col2_width + col3_width / 2, current_y + row_height / 2 - 0.15 * cm, '||||||||||||')
+    draw_centered_text(c, asn_no, 0.5 * cm + col1_width, current_y + row_height / 2 - 0.15 * cm, col2_width)
+    draw_centered_text(c, '||||||||||||', 0.5 * cm + col1_width + col2_width, current_y + row_height / 2 - 0.15 * cm, col3_width)
     
     # Row 3: Part No Header, Part Value, Barcode
     current_y -= row_height
@@ -246,10 +252,10 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row_height)
     
     c.setFont('Helvetica-Bold', 11)
-    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Part No')
+    draw_centered_text(c, 'Part No', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
-    c.drawCentredText(0.5 * cm + col1_width + col2_width / 2, current_y + row_height / 2 - 0.15 * cm, part_no)
-    c.drawCentredText(0.5 * cm + col1_width + col2_width + col3_width / 2, current_y + row_height / 2 - 0.15 * cm, '||||||||||||')
+    draw_centered_text(c, part_no, 0.5 * cm + col1_width, current_y + row_height / 2 - 0.15 * cm, col2_width)
+    draw_centered_text(c, '||||||||||||', 0.5 * cm + col1_width + col2_width, current_y + row_height / 2 - 0.15 * cm, col3_width)
     
     # Row 4: Description Header, Description Value
     current_y -= row_height
@@ -257,7 +263,7 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + col1_width, current_y, col2_width + col3_width, row_height)
     
     c.setFont('Helvetica-Bold', 11)
-    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Description')
+    draw_centered_text(c, 'Description', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
     # Truncate description if too long
     if len(description) > 25:
@@ -271,10 +277,10 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row_height)
     
     c.setFont('Helvetica-Bold', 11)
-    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Quantity')
+    draw_centered_text(c, 'Quantity', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
-    c.drawCentredText(0.5 * cm + col1_width + col2_width / 2, current_y + row_height / 2 - 0.15 * cm, quantity)
-    c.drawCentredText(0.5 * cm + col1_width + col2_width + col3_width / 2, current_y + row_height / 2 - 0.15 * cm, '||||||||||||')
+    draw_centered_text(c, quantity, 0.5 * cm + col1_width, current_y + row_height / 2 - 0.15 * cm, col2_width)
+    draw_centered_text(c, '||||||||||||', 0.5 * cm + col1_width + col2_width, current_y + row_height / 2 - 0.15 * cm, col3_width)
     
     # Row 6: Net Wt Header, Net Wt Value, Gross Wt Header, Gross Wt Value
     current_y -= row_height
@@ -287,13 +293,13 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + header_width * 2 + value_width, current_y, value_width, row_height)
     
     c.setFont('Helvetica-Bold', 11)
-    c.drawCentredText(0.5 * cm + header_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Net Wt')
+    draw_centered_text(c, 'Net Wt', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, header_width)
     c.setFont('Helvetica', 11)
-    c.drawCentredText(0.5 * cm + header_width + value_width / 2, current_y + row_height / 2 - 0.15 * cm, net_weight)
+    draw_centered_text(c, net_weight, 0.5 * cm + header_width, current_y + row_height / 2 - 0.15 * cm, value_width)
     c.setFont('Helvetica-Bold', 11)
-    c.drawCentredText(0.5 * cm + header_width + value_width + header_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Gross Wt')
+    draw_centered_text(c, 'Gross Wt', 0.5 * cm + header_width + value_width, current_y + row_height / 2 - 0.15 * cm, header_width)
     c.setFont('Helvetica', 11)
-    c.drawCentredText(0.5 * cm + header_width * 2 + value_width + value_width / 2, current_y + row_height / 2 - 0.15 * cm, gross_weight)
+    draw_centered_text(c, gross_weight, 0.5 * cm + header_width * 2 + value_width, current_y + row_height / 2 - 0.15 * cm, value_width)
     
     # Row 7: Shipper Info Header, Shipper Part Value, Shipper Name
     current_y -= row_height
@@ -303,13 +309,13 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row7_height)
     
     c.setFont('Helvetica-Bold', 11)
-    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row7_height / 2 - 0.15 * cm, 'Shipper')
+    draw_centered_text(c, 'Shipper', 0.5 * cm, current_y + row7_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
-    c.drawCentredText(0.5 * cm + col1_width + col2_width / 2, current_y + row7_height / 2 - 0.15 * cm, shipper_part)
+    draw_centered_text(c, shipper_part, 0.5 * cm + col1_width, current_y + row7_height / 2 - 0.15 * cm, col2_width)
     # Truncate shipper name if too long
     if len(shipper) > 15:
         shipper = shipper[:12] + "..."
-    c.drawCentredText(0.5 * cm + col1_width + col2_width + col3_width / 2, current_y + row7_height / 2 - 0.15 * cm, shipper)
+    draw_centered_text(c, shipper, 0.5 * cm + col1_width + col2_width, current_y + row7_height / 2 - 0.15 * cm, col3_width)
 
 # File upload section
 st.markdown("""
