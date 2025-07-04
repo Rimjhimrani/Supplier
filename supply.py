@@ -10,6 +10,10 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.pdfgen import canvas
 import tempfile
 import os
+import barcode
+from barcode import Code128
+from barcode.writer import ImageWriter
+from PIL import Image
 
 # Set page configuration
 st.set_page_config(
@@ -162,6 +166,52 @@ def draw_centered_text(canvas, text, x, y, width):
     center_x = x + width / 2 - text_width / 2
     canvas.drawString(center_x, y, text)
 
+def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
+    """Generate a barcode image for the given data"""
+    try:
+        # Create barcode using Code128 (most common format)
+        code128 = Code128(str(data), writer=ImageWriter())
+        
+        # Generate barcode image in memory
+        barcode_buffer = io.BytesIO()
+        code128.write(barcode_buffer, options={
+            'module_width': 0.2,
+            'module_height': 8,
+            'quiet_zone': 1,
+            'text_distance': 2,
+            'font_size': 8
+        })
+        
+        # Load the image
+        barcode_buffer.seek(0)
+        barcode_image = Image.open(barcode_buffer)
+        
+        # Save to temporary file for ReportLab
+        temp_barcode = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+        barcode_image.save(temp_barcode.name, 'PNG')
+        temp_barcode.close()
+        
+        return temp_barcode.name
+        
+    except Exception as e:
+        print(f"Error generating barcode: {e}")
+        return None
+
+def draw_barcode(canvas, data, x, y, width_cm, height_cm):
+    """Draw barcode on canvas"""
+    barcode_file = generate_barcode_image(data, width_cm, height_cm)
+    if barcode_file:
+        try:
+            canvas.drawImage(barcode_file, x, y, width=width_cm, height=height_cm)
+            # Clean up temporary file
+            os.unlink(barcode_file)
+        except Exception as e:
+            # If barcode fails, fall back to text
+            draw_centered_text(canvas, str(data), x, y + height_cm/2, width_cm)
+    else:
+        # Fallback to text representation
+        draw_centered_text(canvas, str(data), x, y + height_cm/2, width_cm)
+
 def create_label_pdf(data, column_mappings):
     """Create PDF with shipping labels"""
     # Create a temporary file
@@ -243,7 +293,8 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     draw_centered_text(c, 'ASN No', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
     draw_centered_text(c, asn_no, 0.5 * cm + col1_width, current_y + row_height / 2 - 0.15 * cm, col2_width)
-    draw_centered_text(c, '||||||||||||', 0.5 * cm + col1_width + col2_width, current_y + row_height / 2 - 0.15 * cm, col3_width)
+    # Draw barcode for ASN number
+    draw_barcode(c, asn_no, 0.5 * cm + col1_width + col2_width + 0.1 * cm, current_y + 0.1 * cm, col3_width - 0.2 * cm, row_height - 0.2 * cm)
     
     # Row 3: Part No Header, Part Value, Barcode
     current_y -= row_height
@@ -255,7 +306,8 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     draw_centered_text(c, 'Part No', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
     draw_centered_text(c, part_no, 0.5 * cm + col1_width, current_y + row_height / 2 - 0.15 * cm, col2_width)
-    draw_centered_text(c, '||||||||||||', 0.5 * cm + col1_width + col2_width, current_y + row_height / 2 - 0.15 * cm, col3_width)
+    # Draw barcode for part number
+    draw_barcode(c, part_no, 0.5 * cm + col1_width + col2_width + 0.1 * cm, current_y + 0.1 * cm, col3_width - 0.2 * cm, row_height - 0.2 * cm)
     
     # Row 4: Description Header, Description Value
     current_y -= row_height
@@ -280,7 +332,8 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     draw_centered_text(c, 'Quantity', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
     draw_centered_text(c, quantity, 0.5 * cm + col1_width, current_y + row_height / 2 - 0.15 * cm, col2_width)
-    draw_centered_text(c, '||||||||||||', 0.5 * cm + col1_width + col2_width, current_y + row_height / 2 - 0.15 * cm, col3_width)
+    # Draw barcode for quantity
+    draw_barcode(c, quantity, 0.5 * cm + col1_width + col2_width + 0.1 * cm, current_y + 0.1 * cm, col3_width - 0.2 * cm, row_height - 0.2 * cm)
     
     # Row 6: Net Wt Header, Net Wt Value, Gross Wt Header, Gross Wt Value
     current_y -= row_height
@@ -423,9 +476,11 @@ st.markdown("""
             <h3>Label Features</h3>
             <ul>
                 <li>📦 Custom 10cm x 15cm label format</li>
-                <li>📊 Automatic barcode generation</li>
+                <li>📊 Real Code128 barcodes (scannable)</li>
                 <li>📍 Fixed EKA Mobility header</li>
-                <li>🔢 ASN tracking number</li>
+                <li>🔢 ASN tracking number with barcode</li>
+                <li>🔧 Part number with barcode</li>
+                <li>📈 Quantity with barcode</li>
                 <li>⚖️ Weight information included</li>
                 <li>📋 7-row structured layout</li>
             </ul>
@@ -450,4 +505,4 @@ st.markdown("""
 
 # Footer
 st.markdown("---")
-st.markdown("**Designed and Developed by Agilomatrix** | Streamlit Version")
+st.markdown("**Designed and Developed by Agilomatrix** ")
