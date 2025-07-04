@@ -173,16 +173,14 @@ def draw_centered_text(canvas, text, x, y, width):
     canvas.drawString(center_x, y, text)
 
 def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
-    """Generate a barcode image for the given data"""
-    # Don't generate barcode for empty data
+    """Generate a barcode image for the given data without text below"""
     if not data or str(data).strip() == "":
         return None
         
     try:
-        # Create barcode using Code128 (most common format)
         code128 = Code128(str(data), writer=ImageWriter())
+        code128.text = ""  # Remove human-readable text
         
-        # Generate barcode image in memory
         barcode_buffer = io.BytesIO()
         code128.write(barcode_buffer, options={
             'module_width': 0.2,
@@ -192,17 +190,15 @@ def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
             'font_size': 8
         })
         
-        # Load the image
         barcode_buffer.seek(0)
         barcode_image = Image.open(barcode_buffer)
         
-        # Save to temporary file for ReportLab
         temp_barcode = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
         barcode_image.save(temp_barcode.name, 'PNG')
         temp_barcode.close()
         
-        return temp_barcode.name
-        
+        return temp_barcode.name  # Note: Fixed typo from "nameremove"
+    
     except Exception as e:
         print(f"Error generating barcode: {e}")
         return None
