@@ -115,7 +115,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <h1>📦 Shipping Label Generator</h1>
-    <p class="subtitle">Designed and Developed by Agilomatrix</p>
+    <p class="subtitle" style="font-size: 1.4em;">Designed and Developed by Agilomatrix</p>
 </div>
 """, unsafe_allow_html=True)
 
