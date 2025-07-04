@@ -153,12 +153,18 @@ def detect_columns(headers):
     
     return column_mappings
 
-def get_value_with_fallback(row, column_name, default_value):
+def get_value_with_fallback(row, column_name, default_value, allow_blank=False):
     """Get value from row with fallback to default"""
-    if not column_name or pd.isna(row.get(column_name)):
-        return default_value
-    value = str(row[column_name]).strip()
-    return value if value else default_value
+    if not column_name:
+        return default_value if not allow_blank else ""
+    
+    # Check if the value exists and is not NaN
+    if column_name in row and pd.notna(row[column_name]):
+        value = str(row[column_name]).strip()
+        return value if value else ("" if allow_blank else default_value)
+    
+    # If column doesn't exist or is NaN
+    return "" if allow_blank else default_value
 
 def draw_centered_text(canvas, text, x, y, width):
     """Helper function to draw centered text"""
@@ -168,6 +174,10 @@ def draw_centered_text(canvas, text, x, y, width):
 
 def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
     """Generate a barcode image for the given data"""
+    # Don't generate barcode for empty data
+    if not data or str(data).strip() == "":
+        return None
+        
     try:
         # Create barcode using Code128 (most common format)
         code128 = Code128(str(data), writer=ImageWriter())
@@ -199,6 +209,10 @@ def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
 
 def draw_barcode(canvas, data, x, y, width_cm, height_cm):
     """Draw barcode on canvas"""
+    # Don't draw barcode for empty data
+    if not data or str(data).strip() == "":
+        return
+        
     barcode_file = generate_barcode_image(data, width_cm, height_cm)
     if barcode_file:
         try:
@@ -209,8 +223,8 @@ def draw_barcode(canvas, data, x, y, width_cm, height_cm):
             # If barcode fails, fall back to text
             draw_centered_text(canvas, str(data), x, y + height_cm/2, width_cm)
     else:
-        # Fallback to text representation
-        draw_centered_text(canvas, str(data), x, y + height_cm/2, width_cm)
+        # For empty data, don't draw anything (leave blank)
+        pass
 
 def create_label_pdf(data, column_mappings):
     """Create PDF with shipping labels"""
@@ -229,9 +243,9 @@ def create_label_pdf(data, column_mappings):
         if index > 0:
             c.showPage()
         
-        # Extract data with fallbacks
+        # Extract data with fallbacks - ASN can be blank
         document_date = get_value_with_fallback(row, column_mappings.get('document_date'), '11-07-24')
-        asn_no = get_value_with_fallback(row, column_mappings.get('asn_no'), f'ASN{2024070100 + index}')
+        asn_no = get_value_with_fallback(row, column_mappings.get('asn_no'), '', allow_blank=True)
         part_no = get_value_with_fallback(row, column_mappings.get('part_no'), f'PART{index + 1}')
         description = get_value_with_fallback(row, column_mappings.get('description'), 'Description')
         quantity = get_value_with_fallback(row, column_mappings.get('quantity'), '1')
@@ -260,8 +274,8 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     col2_width = 3.0 * cm
     col3_width = 3.7 * cm
     
-    # Set line width and font
-    c.setLineWidth(0.5)
+    # Set line width and font - darker border
+    c.setLineWidth(1.0)  # Increased from 0.5 to 1.0 for darker border
     c.setFont('Helvetica', 11)
     
     # Row 1: EKA Mobility, Document Date Header, Date Value
@@ -292,9 +306,11 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.setFont('Helvetica-Bold', 11)
     draw_centered_text(c, 'ASN No', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
-    draw_centered_text(c, asn_no, 0.5 * cm + col1_width, current_y + row_height / 2 - 0.15 * cm, col2_width)
-    # Draw barcode for ASN number
-    draw_barcode(c, asn_no, 0.5 * cm + col1_width + col2_width + 0.1 * cm, current_y + 0.1 * cm, col3_width - 0.2 * cm, row_height - 0.2 * cm)
+    # Only draw ASN value if it's not empty
+    if asn_no and asn_no.strip():
+        draw_centered_text(c, asn_no, 0.5 * cm + col1_width, current_y + row_height / 2 - 0.15 * cm, col2_width)
+        # Draw barcode for ASN number only if ASN is not empty
+        draw_barcode(c, asn_no, 0.5 * cm + col1_width + col2_width + 0.1 * cm, current_y + 0.1 * cm, col3_width - 0.2 * cm, row_height - 0.2 * cm)
     
     # Row 3: Part No Header, Part Value, Barcode
     current_y -= row_height
@@ -478,18 +494,19 @@ st.markdown("""
                 <li>📦 Custom 10cm x 15cm label format</li>
                 <li>📊 Real Code128 barcodes (scannable)</li>
                 <li>📍 Fixed EKA Mobility header</li>
-                <li>🔢 ASN tracking number with barcode</li>
+                <li>🔢 ASN tracking number with barcode (blank if no data)</li>
                 <li>🔧 Part number with barcode</li>
                 <li>📈 Quantity with barcode</li>
                 <li>⚖️ Weight information included</li>
                 <li>📋 7-row structured layout</li>
+                <li>🔲 Darker borders for better visibility</li>
             </ul>
         </div>
         <div class="info-card">
             <h3>Expected Columns</h3>
             <ul>
                 <li>Document Date / DATE</li>
-                <li>ASN No / ASN_NO</li>
+                <li>ASN No / ASN_NO (can be blank)</li>
                 <li>Part No / PART_NO</li>
                 <li>Description / DESC</li>
                 <li>Quantity / QTY</li>
