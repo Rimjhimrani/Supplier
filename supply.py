@@ -172,43 +172,71 @@ def draw_centered_text(canvas, text, x, y, width):
     center_x = x + width / 2 - text_width / 2
     canvas.drawString(center_x, y, text)
 
-# Custom ImageWriter that disables the human-readable text below the barcode
-class ImageWriterNoText(ImageWriter):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._write_text = False  # This disables the text below the barcode
-
-def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
-    """Generate a barcode image for the given data WITHOUT human-readable text"""
+# Solution 2: Modified function with better text positioning
+def generate_barcode_image_no_overlap(data, width_cm=3.5, height_cm=0.8):
+    """Generate a barcode image with text positioned below (no overlap)"""
     if not data or str(data).strip() == "":
         return None
-
     try:
-        # Use custom writer that suppresses text
-        code128 = Code128(str(data), writer=ImageWriterNoText())
-
+        from barcode import Code128
+        from barcode.writer import ImageWriter
+        
+        # Create barcode with standard writer but adjust options
+        code128 = Code128(str(data), writer=ImageWriter())
         barcode_buffer = io.BytesIO()
+        
+        # Adjust options to prevent overlap
         code128.write(barcode_buffer, options={
             'module_width': 0.2,
-            'module_height': 8,
+            'module_height': 12,  # Increased height for bars
             'quiet_zone': 1,
-            'text_distance': 2,
-            'font_size': 8
+            'text_distance': 8,   # Increased distance from bars
+            'font_size': 10,      # Slightly larger font
+            'write_text': True    # Keep text but position it properly
         })
-
+        
         barcode_buffer.seek(0)
         barcode_image = Image.open(barcode_buffer)
-
+        
         temp_barcode = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
         barcode_image.save(temp_barcode.name, 'PNG')
         temp_barcode.close()
-
         return temp_barcode.name
-
     except Exception as e:
         print(f"Error generating barcode: {e}")
         return None
 
+# Your original function with fixes
+def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
+    """Generate a barcode image - FIXED VERSION"""
+    if not data or str(data).strip() == "":
+        return None
+    try:
+        from barcode import Code128
+        from barcode.writer import ImageWriter
+        
+        # Option 1: Use write_text=False to disable text
+        code128 = Code128(str(data), writer=ImageWriter())
+        barcode_buffer = io.BytesIO()
+        code128.write(barcode_buffer, options={
+            'module_width': 0.2,
+            'module_height': 10,
+            'quiet_zone': 1,
+            'text_distance': 6,    # Increased distance
+            'font_size': 8,
+            'write_text': False    # This should disable text completely
+        })
+        
+        barcode_buffer.seek(0)
+        barcode_image = Image.open(barcode_buffer)
+        
+        temp_barcode = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+        barcode_image.save(temp_barcode.name, 'PNG')
+        temp_barcode.close()
+        return temp_barcode.name
+    except Exception as e:
+        print(f"Error generating barcode: {e}")
+        return None
 
 def draw_barcode(canvas, data, x, y, width_cm, height_cm):
     """Draw barcode on canvas"""
