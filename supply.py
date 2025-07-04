@@ -1,403 +1,447 @@
 import streamlit as st
 import pandas as pd
-import os
-from reportlab.lib.pagesizes import landscape, A4
+import io
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph, PageBreak
-from reportlab.lib.units import cm, inch
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-from io import BytesIO
-import subprocess
-import sys
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.pdfgen import canvas
 import tempfile
-from datetime import datetime
+import os
 
-# Define label dimensions (similar to your original)
-LABEL_WIDTH = 10 * cm  # Wider for shipping label
-LABEL_HEIGHT = 7.2 * cm  # Shorter height
-LABEL_PAGESIZE = (LABEL_WIDTH, LABEL_HEIGHT)
+# Set page configuration
+st.set_page_config(
+    page_title="Shipping Label Generator",
+    page_icon="📦",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# Check for required libraries
-try:
-    import qrcode
-    from reportlab.graphics.barcode import code128
-    BARCODE_AVAILABLE = True
-except ImportError:
-    BARCODE_AVAILABLE = False
-    st.write("Installing required libraries...")
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'qrcode', 'reportlab'])
-    import qrcode
-    from reportlab.graphics.barcode import code128
-    BARCODE_AVAILABLE = True
-
-def generate_barcode(data_string, width=4*cm, height=1*cm):
-    """Generate Code128 barcode"""
-    try:
-        from reportlab.graphics.shapes import Drawing
-        from reportlab.graphics.barcode import code128
-        
-        # Create barcode
-        barcode = code128.Code128(data_string, barWidth=0.8, barHeight=height)
-        
-        # Create drawing
-        d = Drawing(width, height)
-        d.add(barcode)
-        
-        return d
-    except Exception as e:
-        st.error(f"Error generating barcode: {e}")
-        return None
-
-def find_column_by_keywords(df_columns, keywords):
-    """Find column by matching keywords"""
-    cols = [str(col).upper() for col in df_columns]
-    
-    for keyword in keywords:
-        for i, col in enumerate(cols):
-            if keyword.upper() in col:
-                return df_columns[i]
-    return None
-
-def generate_shipping_labels(excel_file_path, output_pdf_path, status_callback=None):
-    """Generate shipping labels from Excel data"""
-    if status_callback:
-        status_callback(f"Processing file: {excel_file_path}")
-    
-    # Load the Excel data
-    try:
-        if excel_file_path.lower().endswith('.csv'):
-            df = pd.read_csv(excel_file_path)
-        else:
-            try:
-                df = pd.read_excel(excel_file_path)
-            except Exception as e:
-                df = pd.read_excel(excel_file_path, engine='openpyxl')
-        
-        if status_callback:
-            status_callback(f"Successfully read file with {len(df)} rows")
-    except Exception as e:
-        error_msg = f"Error reading file: {e}"
-        if status_callback:
-            status_callback(error_msg)
-        return None
-    
-    # Define column mappings based on the label format
-    column_mappings = {
-        'asn_no': find_column_by_keywords(df.columns, ['ASN', 'ASN_NO', 'ASN NO', 'ADVANCE_SHIPMENT']),
-        'document_date': find_column_by_keywords(df.columns, ['DATE', 'DOC_DATE', 'DOCUMENT_DATE', 'SHIP_DATE']),
-        'part_no': find_column_by_keywords(df.columns, ['PART', 'PART_NO', 'PART NO', 'ITEM']),
-        'description': find_column_by_keywords(df.columns, ['DESC', 'DESCRIPTION', 'ITEM_DESC', 'PART_DESC']),
-        'quantity': find_column_by_keywords(df.columns, ['QTY', 'QUANTITY', 'QTY_SHIPPED']),
-        'net_weight': find_column_by_keywords(df.columns, ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT']),
-        'gross_weight': find_column_by_keywords(df.columns, ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT']),
-        'shipper': find_column_by_keywords(df.columns, ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM']),
-        'receiver': find_column_by_keywords(df.columns, ['RECEIVER', 'CUSTOMER', 'TO', 'CONSIGNEE'])
+# Custom CSS for styling
+st.markdown("""
+<style>
+    .main-header {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border-radius: 20px;
+        margin-bottom: 30px;
     }
     
-    # Show detected columns
-    if status_callback:
-        for key, col in column_mappings.items():
-            if col:
-                status_callback(f"Detected {key}: {col}")
+    .main-header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
     
-    # Create document
-    doc = SimpleDocTemplate(output_pdf_path, pagesize=LABEL_PAGESIZE,
-                          topMargin=0.5*cm, bottomMargin=0.5*cm,
-                          leftMargin=0.5*cm, rightMargin=0.5*cm)
+    .subtitle {
+        font-size: 1.2em;
+        opacity: 0.9;
+        font-style: italic;
+    }
     
-    all_elements = []
+    .upload-section {
+        background: #f8f9fa;
+        border: 3px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
+        margin-bottom: 30px;
+    }
     
-    # Process each row
-    for index, row in df.iterrows():
-        if status_callback:
-            status_callback(f"Creating label {index+1} of {len(df)}")
-        
-        elements = []
+    .info-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .info-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .info-card h3 {
+        color: #2c3e50;
+        margin-bottom: 15px;
+    }
+    
+    .success-message {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+    }
+    
+    .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+    }
+    
+    .info-message {
+        background: #cce7ff;
+        color: #004085;
+        border: 1px solid #b8daff;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Header
+st.markdown("""
+<div class="main-header">
+    <h1>📦 Shipping Label Generator</h1>
+    <p class="subtitle">Designed and Developed by Agilomatrix</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Initialize session state
+if 'uploaded_data' not in st.session_state:
+    st.session_state.uploaded_data = None
+if 'column_mappings' not in st.session_state:
+    st.session_state.column_mappings = {}
+
+def detect_columns(headers):
+    """Detect column mappings based on header names"""
+    mappings = {
+        'document_date': ['DATE', 'DOC_DATE', 'DOCUMENT_DATE', 'SHIP_DATE', 'DOCUMENT DATE'],
+        'asn_no': ['ASN', 'ASN_NO', 'ASN NO', 'ADVANCE_SHIPMENT', 'ASN NUMBER'],
+        'part_no': ['PART', 'PART_NO', 'PART NO', 'ITEM', 'PART NUMBER'],
+        'description': ['DESC', 'DESCRIPTION', 'ITEM_DESC', 'PART_DESC', 'ITEM DESCRIPTION'],
+        'quantity': ['QTY', 'QUANTITY', 'QTY_SHIPPED', 'SHIPPED QTY'],
+        'net_weight': ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT', 'NET WT'],
+        'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT', 'GROSS WT'],
+        'shipper': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME'],
+        'shipper_part': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART']
+    }
+    
+    column_mappings = {}
+    
+    for key, keywords in mappings.items():
+        found = None
+        for header in headers:
+            header_upper = header.upper()
+            if any(keyword in header_upper for keyword in keywords):
+                found = header
+                break
+        if found:
+            column_mappings[key] = found
+    
+    return column_mappings
+
+def get_value_with_fallback(row, column_name, default_value):
+    """Get value from row with fallback to default"""
+    if not column_name or pd.isna(row.get(column_name)):
+        return default_value
+    value = str(row[column_name]).strip()
+    return value if value else default_value
+
+def create_label_pdf(data, column_mappings):
+    """Create PDF with shipping labels"""
+    # Create a temporary file
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+    temp_filename = temp_file.name
+    temp_file.close()
+    
+    # Create PDF with custom page size (10cm x 15cm)
+    page_width = 10 * cm
+    page_height = 15 * cm
+    
+    c = canvas.Canvas(temp_filename, pagesize=(page_width, page_height))
+    
+    for index, row in data.iterrows():
+        if index > 0:
+            c.showPage()
         
         # Extract data with fallbacks
-        asn_no = str(row.get(column_mappings['asn_no'], f"ASN{2024070100 + index}"))
-        document_date = str(row.get(column_mappings['document_date'], datetime.now().strftime('%d-%m-%Y')))
-        part_no = str(row.get(column_mappings['part_no'], f"PART{index+1}"))
-        description = str(row.get(column_mappings['description'], "Description"))
-        quantity = str(row.get(column_mappings['quantity'], "1"))
-        net_weight = str(row.get(column_mappings['net_weight'], "480 KG"))
-        gross_weight = str(row.get(column_mappings['gross_weight'], "500 KG"))
-        shipper = str(row.get(column_mappings['shipper'], "Shipper Name"))
-        receiver = str(row.get(column_mappings['receiver'], "Pinnacle Mobility Solutions Pvt Ltd"))
+        document_date = get_value_with_fallback(row, column_mappings.get('document_date'), '11-07-24')
+        asn_no = get_value_with_fallback(row, column_mappings.get('asn_no'), f'ASN{2024070100 + index}')
+        part_no = get_value_with_fallback(row, column_mappings.get('part_no'), f'PART{index + 1}')
+        description = get_value_with_fallback(row, column_mappings.get('description'), 'Description')
+        quantity = get_value_with_fallback(row, column_mappings.get('quantity'), '1')
+        net_weight = get_value_with_fallback(row, column_mappings.get('net_weight'), '480 KG')
+        gross_weight = get_value_with_fallback(row, column_mappings.get('gross_weight'), '500 KG')
+        shipper = get_value_with_fallback(row, column_mappings.get('shipper'), 'Shipper Name')
+        shipper_part = get_value_with_fallback(row, column_mappings.get('shipper_part'), 'V12345')
         
-        # Header with Receiver
-        header_style = ParagraphStyle(name='Header', fontName='Helvetica-Bold', fontSize=12, alignment=TA_CENTER)
-        receiver_para = Paragraph(f"<b>Receiver</b><br/>{receiver}", header_style)
-        
-        # Main table structure
-        main_table_data = [
-            # Header row
-            [receiver_para, "", ""],
-            
-            # ASN No and Document Date row
-            [
-                Paragraph("<b>ASN No.</b>", ParagraphStyle(name='Label', fontName='Helvetica-Bold', fontSize=10, alignment=TA_LEFT)),
-                Paragraph(asn_no, ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER)),
-                [
-                    Paragraph("<b>Document Date</b>", ParagraphStyle(name='Label', fontName='Helvetica-Bold', fontSize=10, alignment=TA_LEFT)),
-                    Paragraph(document_date, ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER))
-                ]
-            ],
-            
-            # ASN No Barcode
-            ["", generate_barcode(asn_no) if BARCODE_AVAILABLE else Paragraph(asn_no, ParagraphStyle(name='Barcode', fontName='Courier', fontSize=8, alignment=TA_CENTER)), ""],
-            
-            # Part No and Description
-            [
-                Paragraph("<b>Part No / Desc</b>", ParagraphStyle(name='Label', fontName='Helvetica-Bold', fontSize=10, alignment=TA_LEFT)),
-                Paragraph(f"{part_no}", ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER)),
-                Paragraph(description, ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER))
-            ],
-            
-            # Part No Barcode
-            ["", generate_barcode(part_no) if BARCODE_AVAILABLE else Paragraph(part_no, ParagraphStyle(name='Barcode', fontName='Courier', fontSize=8, alignment=TA_CENTER)), ""],
-            
-            # Quantity
-            [
-                Paragraph("<b>Quantity</b>", ParagraphStyle(name='Label', fontName='Helvetica-Bold', fontSize=10, alignment=TA_LEFT)),
-                Paragraph(quantity, ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER)),
-                ""
-            ],
-            
-            # Quantity Barcode
-            ["", generate_barcode(quantity) if BARCODE_AVAILABLE else Paragraph(quantity, ParagraphStyle(name='Barcode', fontName='Courier', fontSize=8, alignment=TA_CENTER)), ""],
-            
-            # Net Weight and Gross Weight
-            [
-                [
-                    Paragraph("<b>Net Wt.</b>", ParagraphStyle(name='Label', fontName='Helvetica-Bold', fontSize=10, alignment=TA_LEFT)),
-                    Paragraph(net_weight, ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER))
-                ],
-                "",
-                [
-                    Paragraph("<b>Gross Wt.</b>", ParagraphStyle(name='Label', fontName='Helvetica-Bold', fontSize=10, alignment=TA_LEFT)),
-                    Paragraph(gross_weight, ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER))
-                ]
-            ],
-            
-            # Shipper
-            [
-                Paragraph("<b>Shipper</b>", ParagraphStyle(name='Label', fontName='Helvetica-Bold', fontSize=10, alignment=TA_LEFT)),
-                Paragraph("V12345", ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER)),
-                Paragraph(shipper, ParagraphStyle(name='Value', fontName='Helvetica', fontSize=10, alignment=TA_CENTER))
-            ]
-        ]
-        
-        # Create the main table
-        main_table = Table(main_table_data,
-                          colWidths=[2*cm, 4*cm, 4*cm],
-                          rowHeights=[1.3*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1*cm, 1.2*cm, 1*cm])
-        
-        # Style the table
-        main_table.setStyle(TableStyle([
-            # Grid
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            
-            # Header styling
-            ('SPAN', (0, 0), (2, 0)),  # Merge header cells
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            
-            # Background colors for label cells
-            ('BACKGROUND', (0, 1), (0, 1), colors.lightgrey),
-            ('BACKGROUND', (0, 3), (0, 3), colors.lightgrey),
-            ('BACKGROUND', (0, 5), (0, 5), colors.lightgrey),
-            ('BACKGROUND', (0, 8), (0, 8), colors.lightgrey),
-            
-            # Font sizes
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ]))
-        
-        elements.append(main_table)
-        
-        # Add to all elements
-        all_elements.extend(elements)
-        
-        # Add page break except for last item
-        if index < len(df) - 1:
-            all_elements.append(PageBreak())
+        # Create the label with exact same layout as original
+        create_single_label(c, document_date, asn_no, part_no, description, quantity, 
+                          net_weight, gross_weight, shipper, shipper_part, page_width, page_height)
     
-    # Build the PDF
+    c.save()
+    return temp_filename
+
+def create_single_label(c, document_date, asn_no, part_no, description, quantity, 
+                       net_weight, gross_weight, shipper, shipper_part, page_width, page_height):
+    """Create a single label with exact same layout as original"""
+    
+    # Set up dimensions (same as original)
+    row_height = 1.0 * cm
+    start_y = page_height - 0.5 * cm - row_height
+    
+    # Column widths
+    col1_width = 2.5 * cm
+    col2_width = 3.0 * cm
+    col3_width = 3.7 * cm
+    
+    # Set line width and font
+    c.setLineWidth(0.5)
+    c.setFont('Helvetica', 11)
+    
+    # Row 1: EKA Mobility, Document Date Header, Date Value
+    current_y = start_y
+    eka_col_width = 3.7 * cm
+    doc_header_width = 3.0 * cm
+    doc_value_width = 2.5 * cm
+    
+    # Draw rectangles
+    c.rect(0.5 * cm, current_y, eka_col_width, row_height)
+    c.rect(0.5 * cm + eka_col_width, current_y, doc_header_width, row_height)
+    c.rect(0.5 * cm + eka_col_width + doc_header_width, current_y, doc_value_width, row_height)
+    
+    # Add text
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredText(0.5 * cm + eka_col_width / 2, current_y + row_height / 2 - 0.15 * cm, 'EKA Mobility')
+    c.drawCentredText(0.5 * cm + eka_col_width + doc_header_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Document Date')
+    
+    c.setFont('Helvetica', 11)
+    c.drawCentredText(0.5 * cm + eka_col_width + doc_header_width + doc_value_width / 2, current_y + row_height / 2 - 0.15 * cm, document_date)
+    
+    # Row 2: ASN No Header, ASN Value, Barcode
+    current_y -= row_height
+    c.rect(0.5 * cm, current_y, col1_width, row_height)
+    c.rect(0.5 * cm + col1_width, current_y, col2_width, row_height)
+    c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row_height)
+    
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row_height / 2 - 0.15 * cm, 'ASN No')
+    c.setFont('Helvetica', 11)
+    c.drawCentredText(0.5 * cm + col1_width + col2_width / 2, current_y + row_height / 2 - 0.15 * cm, asn_no)
+    c.drawCentredText(0.5 * cm + col1_width + col2_width + col3_width / 2, current_y + row_height / 2 - 0.15 * cm, '||||||||||||')
+    
+    # Row 3: Part No Header, Part Value, Barcode
+    current_y -= row_height
+    c.rect(0.5 * cm, current_y, col1_width, row_height)
+    c.rect(0.5 * cm + col1_width, current_y, col2_width, row_height)
+    c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row_height)
+    
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Part No')
+    c.setFont('Helvetica', 11)
+    c.drawCentredText(0.5 * cm + col1_width + col2_width / 2, current_y + row_height / 2 - 0.15 * cm, part_no)
+    c.drawCentredText(0.5 * cm + col1_width + col2_width + col3_width / 2, current_y + row_height / 2 - 0.15 * cm, '||||||||||||')
+    
+    # Row 4: Description Header, Description Value
+    current_y -= row_height
+    c.rect(0.5 * cm, current_y, col1_width, row_height)
+    c.rect(0.5 * cm + col1_width, current_y, col2_width + col3_width, row_height)
+    
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Description')
+    c.setFont('Helvetica', 11)
+    # Truncate description if too long
+    if len(description) > 25:
+        description = description[:22] + "..."
+    c.drawString(0.5 * cm + col1_width + 0.2 * cm, current_y + row_height / 2 - 0.15 * cm, description)
+    
+    # Row 5: Quantity Header, Quantity Value, Barcode
+    current_y -= row_height
+    c.rect(0.5 * cm, current_y, col1_width, row_height)
+    c.rect(0.5 * cm + col1_width, current_y, col2_width, row_height)
+    c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row_height)
+    
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Quantity')
+    c.setFont('Helvetica', 11)
+    c.drawCentredText(0.5 * cm + col1_width + col2_width / 2, current_y + row_height / 2 - 0.15 * cm, quantity)
+    c.drawCentredText(0.5 * cm + col1_width + col2_width + col3_width / 2, current_y + row_height / 2 - 0.15 * cm, '||||||||||||')
+    
+    # Row 6: Net Wt Header, Net Wt Value, Gross Wt Header, Gross Wt Value
+    current_y -= row_height
+    header_width = 2.5 * cm
+    value_width = 2.1 * cm
+    
+    c.rect(0.5 * cm, current_y, header_width, row_height)
+    c.rect(0.5 * cm + header_width, current_y, value_width, row_height)
+    c.rect(0.5 * cm + header_width + value_width, current_y, header_width, row_height)
+    c.rect(0.5 * cm + header_width * 2 + value_width, current_y, value_width, row_height)
+    
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredText(0.5 * cm + header_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Net Wt')
+    c.setFont('Helvetica', 11)
+    c.drawCentredText(0.5 * cm + header_width + value_width / 2, current_y + row_height / 2 - 0.15 * cm, net_weight)
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredText(0.5 * cm + header_width + value_width + header_width / 2, current_y + row_height / 2 - 0.15 * cm, 'Gross Wt')
+    c.setFont('Helvetica', 11)
+    c.drawCentredText(0.5 * cm + header_width * 2 + value_width + value_width / 2, current_y + row_height / 2 - 0.15 * cm, gross_weight)
+    
+    # Row 7: Shipper Info Header, Shipper Part Value, Shipper Name
+    current_y -= row_height
+    row7_height = 1.0 * cm
+    c.rect(0.5 * cm, current_y, col1_width, row7_height)
+    c.rect(0.5 * cm + col1_width, current_y, col2_width, row7_height)
+    c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row7_height)
+    
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredText(0.5 * cm + col1_width / 2, current_y + row7_height / 2 - 0.15 * cm, 'Shipper')
+    c.setFont('Helvetica', 11)
+    c.drawCentredText(0.5 * cm + col1_width + col2_width / 2, current_y + row7_height / 2 - 0.15 * cm, shipper_part)
+    # Truncate shipper name if too long
+    if len(shipper) > 15:
+        shipper = shipper[:12] + "..."
+    c.drawCentredText(0.5 * cm + col1_width + col2_width + col3_width / 2, current_y + row7_height / 2 - 0.15 * cm, shipper)
+
+# File upload section
+st.markdown("""
+<div class="upload-section">
+    <div style="font-size: 4em; margin-bottom: 20px;">📁</div>
+    <h3>Upload Your Excel or CSV File</h3>
+    <p>Choose a file containing your shipping information</p>
+    <p><small>Supported formats: .xlsx, .xls, .csv</small></p>
+</div>
+""", unsafe_allow_html=True)
+
+uploaded_file = st.file_uploader("", type=['xlsx', 'xls', 'csv'])
+
+if uploaded_file is not None:
     try:
-        doc.build(all_elements)
-        if status_callback:
-            status_callback(f"PDF generated successfully: {output_pdf_path}")
-        return output_pdf_path
-    except Exception as e:
-        error_msg = f"Error building PDF: {e}"
-        if status_callback:
-            status_callback(error_msg)
-        return None
-
-def main():
-    """Main Streamlit application"""
-    st.set_page_config(page_title="Shipping Label Generator", page_icon="📦", layout="wide")
-    
-    st.title("📦 Shipping Label Generator")
-    st.markdown(
-        "<p style='font-size:18px; font-style:italic; margin-top:-10px; text-align:left;'>"
-        "Designed and Developed by Agilomatrix</p>",
-        unsafe_allow_html=True
-    )
-
-    st.markdown("---")
-    
-    # File upload
-    st.header("📁 File Upload")
-    uploaded_file = st.file_uploader(
-        "Choose an Excel or CSV file",
-        type=['xlsx', 'xls', 'csv'],
-        help="Upload your Excel or CSV file containing shipping information"
-    )
-    
-    if uploaded_file is not None:
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            temp_input_path = tmp_file.name
+        # Read the file
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
         
-        # Display file info
-        st.success(f"✅ File uploaded: {uploaded_file.name}")
+        # Clean column names
+        df.columns = df.columns.astype(str).str.strip()
         
-        # Preview data
-        try:
-            if uploaded_file.name.lower().endswith('.csv'):
-                preview_df = pd.read_csv(temp_input_path).head(5)
-            else:
-                preview_df = pd.read_excel(temp_input_path).head(5)
-            
-            st.subheader("📊 Data Preview (First 5 rows)")
-            st.dataframe(preview_df, use_container_width=True)
-            
-        except Exception as e:
-            st.error(f"Error previewing file: {e}")
-            return
+        # Detect column mappings
+        column_mappings = detect_columns(df.columns.tolist())
+        st.session_state.column_mappings = column_mappings
+        st.session_state.uploaded_data = df
         
-        # Generate labels section
-        st.subheader("🚀 Generate Shipping Labels")
+        # Show success message
+        st.markdown(f"""
+        <div class="success-message">
+            ✅ File loaded successfully! {len(df)} records found.
+        </div>
+        """, unsafe_allow_html=True)
         
-        if st.button("📦 Generate PDF Labels", type="primary", use_container_width=True):
-            # Create progress container
-            progress_container = st.empty()
-            status_container = st.empty()
-            
-            # Create temporary output file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_output:
-                temp_output_path = tmp_output.name
-            
-            # Progress tracking
-            def update_status(message):
-                status_container.info(f"📊 {message}")
-            
-            try:
-                # Generate the PDF
-                update_status("Starting label generation...")
-                
-                result_path = generate_shipping_labels(
-                    temp_input_path, 
-                    temp_output_path,
-                    status_callback=update_status
-                )
-                
-                if result_path:
-                    # Success - provide download
-                    with open(result_path, 'rb') as pdf_file:
-                        pdf_data = pdf_file.read()
-                    
-                    status_container.success("✅ Labels generated successfully!")
-                    
-                    # Download button
-                    st.download_button(
-                        label="📥 Download PDF Labels",
-                        data=pdf_data,
-                        file_name=f"shipping_labels_{uploaded_file.name.split('.')[0]}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                    
-                    # Show file size
-                    file_size = len(pdf_data) / 1024  # KB
-                    st.info(f"📄 PDF size: {file_size:.1f} KB")
-                    
-                else:
-                    status_container.error("❌ Failed to generate labels")
-                    
-            except Exception as e:
-                status_container.error(f"❌ Error: {str(e)}")
-                st.exception(e)
-            
-            finally:
-                # Cleanup temporary files
-                try:
-                    if os.path.exists(temp_input_path):
-                        os.unlink(temp_input_path)
-                    if os.path.exists(temp_output_path):
-                        os.unlink(temp_output_path)
-                except:
-                    pass
+        # Show preview
+        st.subheader("📊 Data Preview")
+        st.dataframe(df.head(), use_container_width=True)
         
-        # Label information
-        st.subheader("ℹ️ Label Information")
-        
+        # Show column mappings
+        st.subheader("🔗 Column Mappings Detected")
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("""
-            **Label Features:**
-            - 📦 Shipping label format
-            - 📊 Barcode generation
-            - 📍 Receiver information
-            - 🔢 ASN tracking
-            - ⚖️ Weight information
-            """)
+            st.write("**Mapped Columns:**")
+            for key, value in column_mappings.items():
+                if value:
+                    st.write(f"• {key.replace('_', ' ').title()}: `{value}`")
         
         with col2:
-            st.markdown("""
-            **Expected Columns:**
-            - ASN No / ASN_NO
-            - Document Date / DATE
-            - Part No / PART_NO
-            - Description / DESC
-            - Quantity / QTY
-            - Net Weight / NET_WT
-            - Gross Weight / GROSS_WT
-            - Shipper / VENDOR
-            - Receiver / CUSTOMER
-            """)
+            st.write("**Available Columns:**")
+            for col in df.columns:
+                st.write(f"• {col}")
+        
+        # Generate PDF button
+        if st.button("🚀 Generate PDF Labels", type="primary", use_container_width=True):
+            with st.spinner("Generating PDF labels..."):
+                try:
+                    pdf_file = create_label_pdf(df, column_mappings)
+                    
+                    # Read the PDF file
+                    with open(pdf_file, 'rb') as f:
+                        pdf_bytes = f.read()
+                    
+                    # Clean up temporary file
+                    os.unlink(pdf_file)
+                    
+                    # Provide download button
+                    st.download_button(
+                        label="📥 Download PDF Labels",
+                        data=pdf_bytes,
+                        file_name="shipping_labels.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        use_container_width=True
+                    )
+                    
+                    st.markdown("""
+                    <div class="success-message">
+                        ✅ PDF generated successfully! Click the download button above to save your labels.
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                except Exception as e:
+                    st.markdown(f"""
+                    <div class="error-message">
+                        ❌ Error generating PDF: {str(e)}
+                    </div>
+                    """, unsafe_allow_html=True)
     
-    else:
-        # Instructions
-        st.info("👆 Please upload an Excel or CSV file to get started")
-        
-        st.subheader("📋 Instructions")
-        st.markdown("""
-        1. **Upload your file** - Excel (.xlsx, .xls) or CSV format
-        2. **Review data preview** - Check if your data looks correct
-        3. **Generate labels** - Click the button to create your shipping labels
-        4. **Download** - Get your professional shipping labels with barcodes
-        """)
-        
-        # Sample data format
-        st.subheader("📊 Sample Data Format")
-        sample_data = pd.DataFrame({
-            'ASN_NO': ['2024070100', '2024070101', '2024070102'],
-            'Document_Date': ['11-07-2024', '11-07-2024', '11-07-2024'],
-            'Part_No': ['1234567890', '9876543210', '1122334455'],
-            'Description': ['Chassis Harness', 'Engine Component', 'Brake Assembly'],
-            'Quantity': [100, 50, 75],
-            'Net_Weight': ['480 KG', '250 KG', '350 KG'],
-            'Gross_Weight': ['500 KG', '270 KG', '380 KG'],
-            'Shipper': ['XYZ Pvt Ltd', 'ABC Corp', 'DEF Industries'],
-            'Receiver': ['Pinnacle Mobility Solutions Pvt Ltd', 'Pinnacle Mobility Solutions Pvt Ltd', 'Pinnacle Mobility Solutions Pvt Ltd']
-        })
-        st.dataframe(sample_data, use_container_width=True)
+    except Exception as e:
+        st.markdown(f"""
+        <div class="error-message">
+            ❌ Error reading file: {str(e)}
+        </div>
+        """, unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    main()
+# Information section
+st.markdown("""
+<div class="info-section">
+    <h3>ℹ️ Label Information</h3>
+    <div class="info-grid">
+        <div class="info-card">
+            <h3>Label Features</h3>
+            <ul>
+                <li>📦 Custom 10cm x 15cm label format</li>
+                <li>📊 Automatic barcode generation</li>
+                <li>📍 Fixed EKA Mobility header</li>
+                <li>🔢 ASN tracking number</li>
+                <li>⚖️ Weight information included</li>
+                <li>📋 7-row structured layout</li>
+            </ul>
+        </div>
+        <div class="info-card">
+            <h3>Expected Columns</h3>
+            <ul>
+                <li>Document Date / DATE</li>
+                <li>ASN No / ASN_NO</li>
+                <li>Part No / PART_NO</li>
+                <li>Description / DESC</li>
+                <li>Quantity / QTY</li>
+                <li>Net Weight / NET_WT</li>
+                <li>Gross Weight / GROSS_WT</li>
+                <li>Shipper / VENDOR</li>
+                <li>Shipper Part No / SHIPPER_PART</li>
+            </ul>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# Footer
+st.markdown("---")
+st.markdown("**Designed and Developed by Agilomatrix** | Streamlit Version")
