@@ -176,18 +176,19 @@ def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
     """Generate a barcode image for the given data without text below"""
     if not data or str(data).strip() == "":
         return None
-        
+    
     try:
-        code128 = Code128(str(data), writer=ImageWriter())
-        code128.text = ""  # Remove human-readable text
+        # Create Code128 without checksum and explicitly disable text
+        code128 = Code128(str(data), writer=ImageWriter(), add_checksum=False)
         
         barcode_buffer = io.BytesIO()
         code128.write(barcode_buffer, options={
             'module_width': 0.2,
             'module_height': 8,
             'quiet_zone': 1,
-            'text_distance': 2,
-            'font_size': 8
+            'text_distance': 0,  # Set to 0
+            'font_size': 0,      # Set to 0
+            'write_text': False  # Explicitly disable text
         })
         
         barcode_buffer.seek(0)
@@ -197,8 +198,8 @@ def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
         barcode_image.save(temp_barcode.name, 'PNG')
         temp_barcode.close()
         
-        return temp_barcode.name  # Note: Fixed typo from "nameremove"
-    
+        return temp_barcode.name
+        
     except Exception as e:
         print(f"Error generating barcode: {e}")
         return None
