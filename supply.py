@@ -323,7 +323,7 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     # Add text
     c.setFont('Helvetica-Bold', 11)
     draw_centered_text(c, 'Pinnacle Mobility Solutions Pvt. Ltd.', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, eka_col_width)
-    draw_centered_text(c, 'Document Date', 0.5 * cm + eka_col_width, current_y + row_height / 2 - 0.15 * cm, doc_header_width)
+    draw_centered_text(c, 'Date', 0.5 * cm + eka_col_width, current_y + row_height / 2 - 0.15 * cm, doc_header_width)
     
     c.setFont('Helvetica', 11)
     draw_centered_text(c, document_date, 0.5 * cm + eka_col_width + doc_header_width, current_y + row_height / 2 - 0.15 * cm, doc_value_width)
