@@ -137,7 +137,7 @@ def detect_columns(headers):
         'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT', 'GROSS WT', 'GROSS WT.', 'Gross Wt.', 'Gross Wt', 'Gross wt.'],
         'shipper': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID', 'SHIPPER_ID'],
         'shipper_part': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SUPPLIER NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name', 'SHIPPER_NAME']
-    
+    }
     column_mappings = {}
     
     for key, keywords in mappings.items():
