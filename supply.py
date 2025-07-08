@@ -133,8 +133,8 @@ def detect_columns(headers):
         'part_no': ['PART', 'PART_NO', 'PART NO', 'ITEM', 'PART NUMBER', 'PartNo'],
         'description': ['DESC', 'DESCRIPTION', 'ITEM_DESC', 'PART_DESC', 'ITEM DESCRIPTION', 'Part Description', 'Description'],
         'quantity': ['QTY', 'QUANTITY', 'QTY_SHIPPED', 'SHIPPED QTY', 'Quantity', 'Qty'],
-        'net_weight': ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT', 'NET WT', 'Net Wt.', 'Net Wt', 'NetWt'],
-        'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT', 'GROSS WT', 'GROSS WT.', 'Gross Wt.', 'Gross Wt', 'Gross wt.'],
+        'net_weight': ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT', 'Net Weight(KG)', 'NET WT', 'Net Wt.', 'Net Wt', 'NetWt'],
+        'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT','Gross Weight(KG)', 'GROSS WT', 'GROSS WT.', 'Gross Wt.', 'Gross Wt', 'Gross wt.'],
         'shipper_id': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID', 'SHIPPER_ID'],
         'shipper_name': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SUPPLIER NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name', 'SHIPPER_NAME']
     }
@@ -243,8 +243,8 @@ def create_label_pdf(data, column_mappings):
         part_no = get_value_with_fallback(row, column_mappings.get('part_no'), f'PART{index + 1}')
         description = get_value_with_fallback(row, column_mappings.get('description'), 'Description')
         quantity = get_value_with_fallback(row, column_mappings.get('quantity'), '1')
-        net_weight = get_value_with_fallback(row, column_mappings.get('net_weight'), '480 KG')
-        gross_weight = get_value_with_fallback(row, column_mappings.get('gross_weight'), '500 KG')
+        net_weight = get_value_with_fallback(row, column_mappings.get('net_weight'), '480')
+        gross_weight = get_value_with_fallback(row, column_mappings.get('gross_weight'), '500')
         shipper_id = get_value_with_fallback(row, column_mappings.get('shipper_id'), 'V12345')
         shipper_name = get_value_with_fallback(row, column_mappings.get('shipper_name'), 'Shipper Name')
         
@@ -372,25 +372,33 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     draw_centered_text(c, gross_weight, 0.5 * cm + header_width * 2 + value_width, current_y + row_height / 2 - 0.15 * cm, value_width)
     
     # Row 7: Shipper Header, Shipper ID, Shipper Name - FIXED
+    # Row 7: Shipper Header, Shipper ID, Shipper Name - UPDATED WIDTHS
     current_y -= row_height
     row7_height = 1.0 * cm
-    c.rect(0.5 * cm, current_y, col1_width, row7_height)
-    c.rect(0.5 * cm + col1_width, current_y, col2_width, row7_height)
-    c.rect(0.5 * cm + col1_width + col2_width, current_y, col3_width, row7_height)
-    
+
+    # NEW fixed widths
+    shipper_label_width = 2.5 * cm
+    shipper_id_width = 2.5 * cm
+    shipper_name_width = 4.2 * cm
+
+    # Draw rectangles
+    c.rect(0.5 * cm, current_y, shipper_label_width, row7_height)
+    c.rect(0.5 * cm + shipper_label_width, current_y, shipper_id_width, row7_height)
+    c.rect(0.5 * cm + shipper_label_width + shipper_id_width, current_y, shipper_name_width, row7_height)
+
+    # Add text
     c.setFont('Helvetica-Bold', 11)
-    draw_centered_text(c, 'Shipper', 0.5 * cm, current_y + row7_height / 2 - 0.15 * cm, col1_width)
+    draw_centered_text(c, 'Shipper', 0.5 * cm, current_y + row7_height / 2 - 0.15 * cm, shipper_label_width)
+
     c.setFont('Helvetica', 11)
-    
-    # FIXED: Second column shows Shipper ID
-    draw_centered_text(c, shipper_id, 0.5 * cm + col1_width, current_y + row7_height / 2 - 0.15 * cm, col2_width)
-    
-    # FIXED: Third column shows Shipper Name
+    draw_centered_text(c, shipper_id, 0.5 * cm + shipper_label_width, current_y + row7_height / 2 - 0.15 * cm, shipper_id_width)
+
     # Truncate shipper name if too long
     display_shipper_name = shipper_name
     if len(display_shipper_name) > 15:
         display_shipper_name = display_shipper_name[:12] + "..."
-    draw_centered_text(c, display_shipper_name, 0.5 * cm + col1_width + col2_width, current_y + row7_height / 2 - 0.15 * cm, col3_width)
+    draw_centered_text(c, display_shipper_name, 0.5 * cm + shipper_label_width + shipper_id_width, current_y + row7_height / 2 - 0.15 * cm, shipper_name_width)
+
 
 # File upload section
 st.markdown("""
