@@ -135,8 +135,8 @@ def detect_columns(headers):
         'quantity': ['QTY', 'QUANTITY', 'QTY_SHIPPED', 'SHIPPED QTY', 'Quantity', 'Qty'],
         'net_weight': ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT', 'NET WT', 'Net Wt.', 'Net Wt', 'NetWt'],
         'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT', 'GROSS WT', 'GROSS WT.', 'Gross Wt.', 'Gross Wt', 'Gross wt.'],
-        'shipper': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID', 'SHIPPER_ID'],
-        'shipper_part': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SUPPLIER NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name', 'SHIPPER_NAME']
+        'shipper_id': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID', 'SHIPPER_ID'],
+        'shipper_name': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SUPPLIER NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name', 'SHIPPER_NAME']
     }
     column_mappings = {}
     
@@ -171,59 +171,23 @@ def draw_centered_text(canvas, text, x, y, width):
     center_x = x + width / 2 - text_width / 2
     canvas.drawString(center_x, y, text)
 
-# Solution 2: Modified function with better text positioning
-def generate_barcode_image_no_overlap(data, width_cm=3.5, height_cm=0.8):
-    """Generate a barcode image with text positioned below (no overlap)"""
-    if not data or str(data).strip() == "":
-        return None
-    try:
-        from barcode import Code128
-        from barcode.writer import ImageWriter
-        
-        # Create barcode with standard writer but adjust options
-        code128 = Code128(str(data), writer=ImageWriter())
-        barcode_buffer = io.BytesIO()
-        
-        # Adjust options to prevent overlap
-        code128.write(barcode_buffer, options={
-            'module_width': 0.2,
-            'module_height': 12,  # Increased height for bars
-            'quiet_zone': 1,
-            'text_distance': 8,   # Increased distance from bars
-            'font_size': 10,      # Slightly larger font
-            'write_text': True    # Keep text but position it properly
-        })
-        
-        barcode_buffer.seek(0)
-        barcode_image = Image.open(barcode_buffer)
-        
-        temp_barcode = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
-        barcode_image.save(temp_barcode.name, 'PNG')
-        temp_barcode.close()
-        return temp_barcode.name
-    except Exception as e:
-        print(f"Error generating barcode: {e}")
-        return None
-
-# Your original function with fixes
 def generate_barcode_image(data, width_cm=3.5, height_cm=0.8):
-    """Generate a barcode image - FIXED VERSION"""
+    """Generate a barcode image"""
     if not data or str(data).strip() == "":
         return None
     try:
         from barcode import Code128
         from barcode.writer import ImageWriter
         
-        # Option 1: Use write_text=False to disable text
         code128 = Code128(str(data), writer=ImageWriter())
         barcode_buffer = io.BytesIO()
         code128.write(barcode_buffer, options={
             'module_width': 0.2,
             'module_height': 10,
             'quiet_zone': 1,
-            'text_distance': 6,    # Increased distance
+            'text_distance': 6,
             'font_size': 8,
-            'write_text': False    # This should disable text completely
+            'write_text': False
         })
         
         barcode_buffer.seek(0)
@@ -281,19 +245,19 @@ def create_label_pdf(data, column_mappings):
         quantity = get_value_with_fallback(row, column_mappings.get('quantity'), '1')
         net_weight = get_value_with_fallback(row, column_mappings.get('net_weight'), '480 KG')
         gross_weight = get_value_with_fallback(row, column_mappings.get('gross_weight'), '500 KG')
-        shipper = get_value_with_fallback(row, column_mappings.get('shipper'), 'V12345')
-        shipper_part = get_value_with_fallback(row, column_mappings.get('shipper_part'), 'Shipper Name')
+        shipper_id = get_value_with_fallback(row, column_mappings.get('shipper_id'), 'V12345')
+        shipper_name = get_value_with_fallback(row, column_mappings.get('shipper_name'), 'Shipper Name')
         
-        # Create the label with exact same layout as original
+        # Create the label with correct mapping
         create_single_label(c, document_date, asn_no, part_no, description, quantity, 
-                          net_weight, gross_weight, shipper, shipper_part, page_width, page_height)
+                          net_weight, gross_weight, shipper_id, shipper_name, page_width, page_height)
     
     c.save()
     return temp_filename
 
 def create_single_label(c, document_date, asn_no, part_no, description, quantity, 
-                       net_weight, gross_weight, shipper, shipper_part, page_width, page_height):
-    """Create a single label with exact same layout as original"""
+                       net_weight, gross_weight, shipper_id, shipper_name, page_width, page_height):
+    """Create a single label with correct shipper information"""
     
     # Set up dimensions (same as original)
     row_height = 1.0 * cm
@@ -305,7 +269,7 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     col3_width = 3.7 * cm
     
     # Set line width and font - darker border
-    c.setLineWidth(1.0)  # Increased from 0.5 to 1.0 for darker border
+    c.setLineWidth(1.0)
     c.setFont('Helvetica', 11)
     
     # Row 1: EKA Mobility, Document Date Header, Date Value
@@ -321,12 +285,10 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     
     # Add text
     c.setFont('Helvetica-Bold', 11)
-    # Vertical center of the box
     center_y = current_y + row_height / 2
 
     # First line: slightly above the center
     draw_centered_text(c, 'Pinnacle Mobility Solutions', 0.5 * cm, center_y + 0.15 * cm, eka_col_width)
-
     # Second line: slightly below the center
     draw_centered_text(c, 'Pvt. Ltd.', 0.5 * cm, center_y - 0.25 * cm, eka_col_width)
 
@@ -409,7 +371,7 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.setFont('Helvetica', 11)
     draw_centered_text(c, gross_weight, 0.5 * cm + header_width * 2 + value_width, current_y + row_height / 2 - 0.15 * cm, value_width)
     
-    # Row 7: Shipper Header, Shipper ID (from excel), Shipper Name (from excel)
+    # Row 7: Shipper Header, Shipper ID, Shipper Name
     current_y -= row_height
     row7_height = 1.0 * cm
     c.rect(0.5 * cm, current_y, col1_width, row7_height)
@@ -419,13 +381,13 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.setFont('Helvetica-Bold', 11)
     draw_centered_text(c, 'Shipper', 0.5 * cm, current_y + row7_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
-    # Second column: Shipper ID (from shipper_part column in excel)
-    draw_centered_text(c, shipper_part, 0.5 * cm + col1_width, current_y + row7_height / 2 - 0.15 * cm, col2_width)
-    # Third column: Shipper Name (from shipper column in excel)
+    # Second column: Shipper ID
+    draw_centered_text(c, shipper_id, 0.5 * cm + col1_width, current_y + row7_height / 2 - 0.15 * cm, col2_width)
+    # Third column: Shipper Name
     # Truncate shipper name if too long
-    if len(shipper) > 15:
-        shipper = shipper[:12] + "..."
-    draw_centered_text(c, shipper, 0.5 * cm + col1_width + col2_width, current_y + row7_height / 2 - 0.15 * cm, col3_width)
+    if len(shipper_name) > 15:
+        shipper_name = shipper_name[:12] + "..."
+    draw_centered_text(c, shipper_name, 0.5 * cm + col1_width + col2_width, current_y + row7_height / 2 - 0.15 * cm, col3_width)
 
 # File upload section
 st.markdown("""
@@ -564,4 +526,4 @@ st.markdown("""
 
 # Footer
 st.markdown("---")
-st.markdown("**Designed and Developed by Agilomatrix** ")
+st.markdown("**Designed and Developed by Agilomatrix**")
