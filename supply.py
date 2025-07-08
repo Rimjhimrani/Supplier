@@ -135,8 +135,8 @@ def detect_columns(headers):
         'quantity': ['QTY', 'QUANTITY', 'QTY_SHIPPED', 'SHIPPED QTY', 'Quantity', 'Qty'],
         'net_weight': ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT', 'NET WT', 'Net Wt.', 'Net Wt', 'NetWt'],
         'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT', 'GROSS WT', 'GROSS WT.', 'Gross Wt.', 'Gross Wt', 'Gross wt.'],
-        'shipper': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name'],
-        'shipper_part': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID']
+        'shipper': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SUPPLIER NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name', 'SHIPPER_NAME'],
+        'shipper_part': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID', 'SHIPPER_ID']
     }
     
     column_mappings = {}
@@ -410,7 +410,7 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.setFont('Helvetica', 11)
     draw_centered_text(c, gross_weight, 0.5 * cm + header_width * 2 + value_width, current_y + row_height / 2 - 0.15 * cm, value_width)
     
-    # Row 7: Shipper Info Header, Shipper Part Value, Shipper Name
+    # Row 7: Shipper Header, Shipper ID (from excel), Shipper Name (from excel)
     current_y -= row_height
     row7_height = 1.0 * cm
     c.rect(0.5 * cm, current_y, col1_width, row7_height)
@@ -420,7 +420,9 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.setFont('Helvetica-Bold', 11)
     draw_centered_text(c, 'Shipper', 0.5 * cm, current_y + row7_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
+    # Second column: Shipper ID (from shipper_part column in excel)
     draw_centered_text(c, shipper_part, 0.5 * cm + col1_width, current_y + row7_height / 2 - 0.15 * cm, col2_width)
+    # Third column: Shipper Name (from shipper column in excel)
     # Truncate shipper name if too long
     if len(shipper) > 15:
         shipper = shipper[:12] + "..."
@@ -540,6 +542,7 @@ st.markdown("""
                 <li>⚖️ Weight information included</li>
                 <li>📋 7-row structured layout</li>
                 <li>🔲 Darker borders for better visibility</li>
+                <li>🏷️ Shipper ID and Name from Excel data</li>
             </ul>
         </div>
         <div class="info-card">
@@ -552,8 +555,8 @@ st.markdown("""
                 <li>Quantity / QTY</li>
                 <li>Net Weight / NET_WT</li>
                 <li>Gross Weight / GROSS_WT</li>
-                <li>Shipper / VENDOR</li>
-                <li>Shipper Part No / SHIPPER_PART</li>
+                <li>Shipper Name / VENDOR</li>
+                <li>Shipper ID / SHIPPER_PART</li>
             </ul>
         </div>
     </div>
