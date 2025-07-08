@@ -321,8 +321,16 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + eka_col_width + doc_header_width, current_y, doc_value_width, row_height)
     
     # Add text
-    c.setFont('Helvetica-Bold', 8)
-    draw_centered_text(c, 'Pinnacle Mobility Solutions Pvt. Ltd.', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, eka_col_width)
+    c.setFont('Helvetica-Bold', 9)
+    # Vertical center of the box
+    center_y = current_y + row_height / 2
+
+    # First line: slightly above the center
+    draw_centered_text(c, 'Pinnacle Mobility Solutions', 0.5 * cm, center_y + 0.15 * cm, eka_col_width)
+
+    # Second line: slightly below the center
+    draw_centered_text(c, 'Pvt. Ltd.', 0.5 * cm, center_y - 0.25 * cm, eka_col_width)
+
     c.setFont('Helvetica-Bold', 11)
     draw_centered_text(c, 'Date', 0.5 * cm + eka_col_width, current_y + row_height / 2 - 0.15 * cm, doc_header_width)
     
