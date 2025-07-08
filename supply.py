@@ -311,8 +311,8 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     
     # Row 1: EKA Mobility, Document Date Header, Date Value
     current_y = start_y
-    eka_col_width = 5.4 * cm
-    doc_header_width = 1.5 * cm
+    eka_col_width = 5.5 * cm
+    doc_header_width = 1.4 * cm
     doc_value_width = 2.3 * cm
     
     # Draw rectangles
