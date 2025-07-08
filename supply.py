@@ -128,7 +128,7 @@ if 'column_mappings' not in st.session_state:
 def detect_columns(headers):
     """Detect column mappings based on header names"""
     mappings = {
-        'document_date': ['DATE', 'DOC_DATE', 'DOCUMENT_DATE', 'SHIP_DATE', 'DOCUMENT DATE',"Document Date'],
+        'document_date': ['DATE', 'DOC_DATE', 'DOCUMENT_DATE', 'SHIP_DATE', 'DOCUMENT DATE','Document Date'],
         'asn_no': ['ASN', 'ASN_NO', 'ASN NO', 'ADVANCE_SHIPMENT', 'ASN NUMBER','ASN No.', 'ASN No'],
         'part_no': ['PART', 'PART_NO', 'PART NO', 'ITEM', 'PART NUMBER','PartNo'],
         'description': ['DESC', 'DESCRIPTION', 'ITEM_DESC', 'PART_DESC', 'ITEM DESCRIPTION','Part Description', 'Description'],
