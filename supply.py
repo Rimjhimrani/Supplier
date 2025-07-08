@@ -135,9 +135,8 @@ def detect_columns(headers):
         'quantity': ['QTY', 'QUANTITY', 'QTY_SHIPPED', 'SHIPPED QTY', 'Quantity', 'Qty'],
         'net_weight': ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT', 'NET WT', 'Net Wt.', 'Net Wt', 'NetWt'],
         'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT', 'GROSS WT', 'GROSS WT.', 'Gross Wt.', 'Gross Wt', 'Gross wt.'],
-        'shipper': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SUPPLIER NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name', 'SHIPPER_NAME'],
-        'shipper_part': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID', 'SHIPPER_ID']
-    }
+        'shipper': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID', 'SHIPPER_ID'],
+        'shipper_part': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SUPPLIER NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name', 'SHIPPER_NAME']
     
     column_mappings = {}
     
@@ -282,8 +281,8 @@ def create_label_pdf(data, column_mappings):
         quantity = get_value_with_fallback(row, column_mappings.get('quantity'), '1')
         net_weight = get_value_with_fallback(row, column_mappings.get('net_weight'), '480 KG')
         gross_weight = get_value_with_fallback(row, column_mappings.get('gross_weight'), '500 KG')
-        shipper = get_value_with_fallback(row, column_mappings.get('shipper'), 'Shipper Name')
-        shipper_part = get_value_with_fallback(row, column_mappings.get('shipper_part'), 'V12345')
+        shipper = get_value_with_fallback(row, column_mappings.get('shipper'), 'V12345')
+        shipper_part = get_value_with_fallback(row, column_mappings.get('shipper_part'), 'Shipper Name')
         
         # Create the label with exact same layout as original
         create_single_label(c, document_date, asn_no, part_no, description, quantity, 
