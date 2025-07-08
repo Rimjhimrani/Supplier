@@ -311,9 +311,9 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     
     # Row 1: EKA Mobility, Document Date Header, Date Value
     current_y = start_y
-    eka_col_width = 3.7 * cm
-    doc_header_width = 3.0 * cm
-    doc_value_width = 2.5 * cm
+    eka_col_width = 4.9 * cm
+    doc_header_width = 2.0 * cm
+    doc_value_width = 2.3 * cm
     
     # Draw rectangles
     c.rect(0.5 * cm, current_y, eka_col_width, row_height)
@@ -322,7 +322,7 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     
     # Add text
     c.setFont('Helvetica-Bold', 11)
-    draw_centered_text(c, 'EKA Mobility', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, eka_col_width)
+    draw_centered_text(c, 'Pinnacle Mobility Solutions Pvt. Ltd.', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, eka_col_width)
     draw_centered_text(c, 'Document Date', 0.5 * cm + eka_col_width, current_y + row_height / 2 - 0.15 * cm, doc_header_width)
     
     c.setFont('Helvetica', 11)
