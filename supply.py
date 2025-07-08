@@ -153,16 +153,15 @@ def detect_columns(headers):
     return column_mappings
 
 def get_value_with_fallback(row, column_name, default_value, allow_blank=False):
-    """Get value from row with fallback to default"""
     if not column_name:
         return default_value if not allow_blank else ""
-    
-    # Check if the value exists and is not NaN
     if column_name in row and pd.notna(row[column_name]):
-        value = str(row[column_name]).strip()
-        return value if value else ("" if allow_blank else default_value)
+        value = row[column_name]
+        if isinstance(value, pd.Timestamp):
+            return value.strftime('%d-%m-%y')
+        value_str = str(value).strip()
+        return value_str if value_str else ("" if allow_blank else default_value)
     
-    # If column doesn't exist or is NaN
     return "" if allow_blank else default_value
 
 def draw_centered_text(canvas, text, x, y, width):
