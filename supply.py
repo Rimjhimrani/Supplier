@@ -321,7 +321,7 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + eka_col_width + doc_header_width, current_y, doc_value_width, row_height)
     
     # Add text
-    c.setFont('Helvetica-Bold', 10)
+    c.setFont('Helvetica-Bold', 11)
     # Vertical center of the box
     center_y = current_y + row_height / 2
 
