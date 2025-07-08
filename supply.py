@@ -128,15 +128,15 @@ if 'column_mappings' not in st.session_state:
 def detect_columns(headers):
     """Detect column mappings based on header names"""
     mappings = {
-        'document_date': ['DATE', 'DOC_DATE', 'DOCUMENT_DATE', 'SHIP_DATE', 'DOCUMENT DATE','Document Date'],
-        'asn_no': ['ASN', 'ASN_NO', 'ASN NO', 'ADVANCE_SHIPMENT', 'ASN NUMBER','ASN No.', 'ASN No'],
-        'part_no': ['PART', 'PART_NO', 'PART NO', 'ITEM', 'PART NUMBER','PartNo'],
-        'description': ['DESC', 'DESCRIPTION', 'ITEM_DESC', 'PART_DESC', 'ITEM DESCRIPTION','Part Description', 'Description'],
-        'quantity': ['QTY', 'QUANTITY', 'QTY_SHIPPED', 'SHIPPED QTY','Quantity','Qty'],
-        'net_weight': ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT', 'NET WT',Net Wt.','Net Wt', 'NetWt'],
-        'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT', 'GROSS WT','GROSS WT.', 'Gross Wt.', 'Gross Wt', Gross wt.'],
-        'shipper': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SHIPPER NAME' 'Shipper Name', 'shipper name'],
-        'shipper_part': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART','Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID']
+        'document_date': ['DATE', 'DOC_DATE', 'DOCUMENT_DATE', 'SHIP_DATE', 'DOCUMENT DATE', 'Document Date'],
+        'asn_no': ['ASN', 'ASN_NO', 'ASN NO', 'ADVANCE_SHIPMENT', 'ASN NUMBER', 'ASN No.', 'ASN No'],
+        'part_no': ['PART', 'PART_NO', 'PART NO', 'ITEM', 'PART NUMBER', 'PartNo'],
+        'description': ['DESC', 'DESCRIPTION', 'ITEM_DESC', 'PART_DESC', 'ITEM DESCRIPTION', 'Part Description', 'Description'],
+        'quantity': ['QTY', 'QUANTITY', 'QTY_SHIPPED', 'SHIPPED QTY', 'Quantity', 'Qty'],
+        'net_weight': ['NET_WT', 'NET_WEIGHT', 'NET WEIGHT', 'NET WT', 'Net Wt.', 'Net Wt', 'NetWt'],
+        'gross_weight': ['GROSS_WT', 'GROSS_WEIGHT', 'GROSS WEIGHT', 'GROSS WT', 'GROSS WT.', 'Gross Wt.', 'Gross Wt', 'Gross wt.'],
+        'shipper': ['SHIPPER', 'VENDOR', 'SUPPLIER', 'FROM', 'VENDOR NAME', 'SHIPPER NAME', 'Shipper Name', 'shipper name'],
+        'shipper_part': ['SHIPPER_PART', 'VENDOR_PART', 'SUPPLIER_PART', 'VENDOR PART', 'SHIPPER PART', 'Shipper ID', 'ID', 'id', 'Shipper_ID', 'Delivery Partner ID']
     }
     
     column_mappings = {}
