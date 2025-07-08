@@ -423,7 +423,13 @@ if uploaded_file is not None:
         df.columns = df.columns.astype(str).str.strip()
         
         # Detect column mappings
+        # Detect column mappings
         column_mappings = detect_columns(df.columns.tolist())
+
+        # Force correct column if detection fails
+        if 'shipper_name' not in column_mappings or column_mappings['shipper_name'] == column_mappings.get('shipper_id'):
+            column_mappings['shipper_name'] = 'Shipper Name'  # << REPLACE with your actual header
+
         st.session_state.column_mappings = column_mappings
         st.session_state.uploaded_data = df
         
