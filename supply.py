@@ -371,7 +371,7 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.setFont('Helvetica', 11)
     draw_centered_text(c, gross_weight, 0.5 * cm + header_width * 2 + value_width, current_y + row_height / 2 - 0.15 * cm, value_width)
     
-    # Row 7: Shipper Header, Shipper ID, Shipper Name
+    # Row 7: Shipper Header, Shipper ID, Shipper Name - FIXED
     current_y -= row_height
     row7_height = 1.0 * cm
     c.rect(0.5 * cm, current_y, col1_width, row7_height)
@@ -381,13 +381,16 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.setFont('Helvetica-Bold', 11)
     draw_centered_text(c, 'Shipper', 0.5 * cm, current_y + row7_height / 2 - 0.15 * cm, col1_width)
     c.setFont('Helvetica', 11)
-    # Second column: Shipper ID
+    
+    # FIXED: Second column shows Shipper ID
     draw_centered_text(c, shipper_id, 0.5 * cm + col1_width, current_y + row7_height / 2 - 0.15 * cm, col2_width)
-    # Third column: Shipper Name
+    
+    # FIXED: Third column shows Shipper Name
     # Truncate shipper name if too long
-    if len(shipper_name) > 15:
-        shipper_name = shipper_name[:12] + "..."
-    draw_centered_text(c, shipper_name, 0.5 * cm + col1_width + col2_width, current_y + row7_height / 2 - 0.15 * cm, col3_width)
+    display_shipper_name = shipper_name
+    if len(display_shipper_name) > 15:
+        display_shipper_name = display_shipper_name[:12] + "..."
+    draw_centered_text(c, display_shipper_name, 0.5 * cm + col1_width + col2_width, current_y + row7_height / 2 - 0.15 * cm, col3_width)
 
 # File upload section
 st.markdown("""
@@ -503,7 +506,7 @@ st.markdown("""
                 <li>⚖️ Weight information included</li>
                 <li>📋 7-row structured layout</li>
                 <li>🔲 Darker borders for better visibility</li>
-                <li>🏷️ Shipper ID and Name from Excel data</li>
+                <li>🏷️ Shipper ID (column 2) and Name (column 3)</li>
             </ul>
         </div>
         <div class="info-card">
