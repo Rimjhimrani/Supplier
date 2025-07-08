@@ -362,11 +362,11 @@ def create_single_label(c, document_date, asn_no, part_no, description, quantity
     c.rect(0.5 * cm + header_width * 2 + value_width, current_y, value_width, row_height)
     
     c.setFont('Helvetica-Bold', 11)
-    draw_centered_text(c, 'Net Wt', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, header_width)
+    draw_centered_text(c, 'Net Wt(KG)', 0.5 * cm, current_y + row_height / 2 - 0.15 * cm, header_width)
     c.setFont('Helvetica', 11)
     draw_centered_text(c, net_weight, 0.5 * cm + header_width, current_y + row_height / 2 - 0.15 * cm, value_width)
     c.setFont('Helvetica-Bold', 11)
-    draw_centered_text(c, 'Gross Wt', 0.5 * cm + header_width + value_width, current_y + row_height / 2 - 0.15 * cm, header_width)
+    draw_centered_text(c, 'Gross Wt(KG)', 0.5 * cm + header_width + value_width, current_y + row_height / 2 - 0.15 * cm, header_width)
     c.setFont('Helvetica', 11)
     draw_centered_text(c, gross_weight, 0.5 * cm + header_width * 2 + value_width, current_y + row_height / 2 - 0.15 * cm, value_width)
     
